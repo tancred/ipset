@@ -2,9 +2,9 @@
 #
 #   docker build --file Dockerfile --tag golang-ipset:1.23 .
 #
-# Run with CWD mounted at /work with
+# Run with the NET_ADMIN capability set and CWD mounted at /work with
 #
-#   docker run -it --rm -v "$PWD":/work -w /work golang-ipset:1.23 bash
+#   docker run -it --rm --cap-add NET_ADMIN -v "$PWD":/work -w /work golang-ipset:1.23 bash
 #
 # Happy coding!
 #
