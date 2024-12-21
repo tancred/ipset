@@ -20,8 +20,8 @@ func main() {
 	fmt.Printf("%v %#v\n", a.To4(), a.To4())
 	fmt.Printf("%v %#v\n", a.To16(), a.To16())
 
-	set.Test("bl", net.IPv4(1,2,3,5))
-	set.Test("bl", net.IPv4(1,2,3,4))
+	set.Test("bl", net.IPv4(1, 2, 3, 5))
+	set.Test("bl", net.IPv4(1, 2, 3, 4))
 
 	set.Save("bl")
 

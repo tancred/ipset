@@ -39,16 +39,16 @@ func goipsPrintOutFn(p unsafe.Pointer, msg *C.char) {
 }
 
 func (set *IPSet) customError(cset *C.struct_ipset, status int, msg string) {
-	fmt.Printf("---- customError: %d (%s) msg: `%s'\n", status, status2String(status), msg)
+	fmt.Printf("  customError: %d (%s) msg: `%s'\n", status, status2String(status), msg)
 
 }
 
 func (set *IPSet) stdError(cset *C.struct_ipset, errType int, msg string) {
-	fmt.Printf("---- stdError: %d (%s) msg: `%s'\n", errType, errType2String(errType), msg)
+	fmt.Printf("  stdError: %d (%s) msg: `%s'\n", errType, errType2String(errType), msg)
 }
 
 func (set *IPSet) printOut(msg string) {
-	fmt.Printf("---- printOut: msg: `%s'\n", msg)
+	fmt.Printf("  printOut: msg: `%s'\n", msg)
 }
 
 func errType2String(errType int) string {

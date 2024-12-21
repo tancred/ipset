@@ -1,4 +1,5 @@
 package ipset
+
 // gen many entries:
 //   $ declare i j int
 //   $ i=1
@@ -31,7 +32,7 @@ const (
 )
 
 type IPSet struct {
-	ptr *C.struct_ipset
+	ptr     *C.struct_ipset
 	selfptr unsafe.Pointer
 }
 
@@ -42,8 +43,8 @@ func init() {
 
 func New() *IPSet {
 	csetptr := C.ipset_init()
-	set := &IPSet {
-		ptr: csetptr,
+	set := &IPSet{
+		ptr:     csetptr,
 		selfptr: nil,
 	}
 	set.selfptr = gopointer.Save(set)
@@ -54,7 +55,7 @@ func New() *IPSet {
 }
 
 func (set *IPSet) Command(command string) int {
-	fmt.Println("will run:", command)
+	fmt.Println("--- command:", command)
 	ccmd := C.CString(command)
 	defer C.free(unsafe.Pointer(ccmd))
 
@@ -69,13 +70,13 @@ func (set *IPSet) Command(command string) int {
 }
 
 func (set *IPSet) Close() {
-		fmt.Println("closing ipset")
+	fmt.Println("closing ipset")
 
-		r := C.ipset_fini(set.ptr)
-		fmt.Println("r=", r)
+	r := C.ipset_fini(set.ptr)
+	fmt.Println("  r =", r)
 
-		fmt.Println("closing ipset: selfptr")
-		gopointer.Unref(set.selfptr)
+	fmt.Println("  closing ipset: selfptr")
+	gopointer.Unref(set.selfptr)
 }
 
 func (set *IPSet) Save(name string) {
