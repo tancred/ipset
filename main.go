@@ -10,7 +10,7 @@ import (
 func main() {
 	fmt.Println("Hello, World!")
 
-	set := ipset.NewIPSet()
+	set := ipset.New()
 	defer set.Close()
 
 	a := net.IPv4(10, 255, 0, 0)

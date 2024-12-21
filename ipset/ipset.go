@@ -1,11 +1,17 @@
 package ipset
+// gen many entries:
+//   $ declare i j int
+//   $ i=1
+//   $ ((j=i+200))
+//   $ while (( i < j )); do ipset add bl 1.2.3.$i; ((i++)) ; done
 
 /*
 #cgo CFLAGS: -W
 #cgo LDFLAGS: -lipset
-#include "cipset.h"
 #include <stdlib.h>
 #include <libipset/ipset.h>
+
+int goips_custom_printf(struct ipset *ipset, void *p);
 */
 import "C"
 
@@ -17,12 +23,24 @@ import (
 	gopointer "github.com/mattn/go-pointer"
 )
 
+type Family int
+
+const (
+	FamilyINET = iota
+	FamilyINET6
+)
+
 type IPSet struct {
 	ptr *C.struct_ipset
 	selfptr unsafe.Pointer
 }
 
-func NewIPSet() *IPSet {
+func init() {
+	fmt.Println("ipset: initializing")
+	C.ipset_load_types()
+}
+
+func New() *IPSet {
 	csetptr := C.ipset_init()
 	set := &IPSet {
 		ptr: csetptr,
@@ -35,7 +53,15 @@ func NewIPSet() *IPSet {
 	return set
 }
 
-func (set IPSet) Close() {
+func (set *IPSet) Command(command string) int {
+	fmt.Println("will run:", command)
+	ccmd := C.CString(command)
+	defer C.free(unsafe.Pointer(ccmd))
+
+	return int(C.ipset_parse_line(set.ptr, ccmd))
+}
+
+func (set *IPSet) Close() {
 		fmt.Println("closing ipset")
 
 		r := C.ipset_fini(set.ptr)
@@ -45,12 +71,8 @@ func (set IPSet) Close() {
 		gopointer.Unref(set.selfptr)
 }
 
-func (set IPSet) Save(name string) {
-	saveCmd := C.CString(fmt.Sprintf("save %s", name))
-	defer C.free(unsafe.Pointer(saveCmd))
-
-	r := C.ipset_parse_line(set.ptr, saveCmd)
-
+func (set *IPSet) Save(name string) {
+	r := set.Command(fmt.Sprintf("save %s", name))
 	if r == 0 {
 		fmt.Println("save OK")
 	} else {
@@ -58,12 +80,8 @@ func (set IPSet) Save(name string) {
 	}
 }
 
-func (set IPSet) Test(name string, addr net.IP) {
-	restoreCmd := C.CString(fmt.Sprintf("test %s %s", name, addr.String()))
-	defer C.free(unsafe.Pointer(restoreCmd))
-
-	r := C.ipset_parse_line(set.ptr, restoreCmd)
-
+func (set *IPSet) Test(name string, addr net.IP) {
+	r := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
 	if r == 0 {
 		fmt.Println("test OK")
 	} else {
@@ -71,20 +89,11 @@ func (set IPSet) Test(name string, addr net.IP) {
 	}
 }
 
-func (set IPSet) Fail() {
-	cmd := C.CString("no command at ALL")
-	defer C.free(unsafe.Pointer(cmd))
-
-	r := C.ipset_parse_line(set.ptr, cmd)
-
+func (set *IPSet) Fail() {
+	r := set.Command("no command at ALL")
 	if r == 0 {
 		fmt.Println("cmd OK")
 	} else {
 		fmt.Println("cmd NAY")
 	}
-}
-
-func init() {
-	fmt.Println("ipset: initializing")
-	C.ipset_load_types()
 }
