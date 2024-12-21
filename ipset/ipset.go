@@ -58,6 +58,13 @@ func (set *IPSet) Command(command string) int {
 	ccmd := C.CString(command)
 	defer C.free(unsafe.Pointer(ccmd))
 
+	if set.ptr != nil {
+		r := C.ipset_fini(set.ptr)
+		fmt.Println("  r =", r)
+		set.ptr = C.ipset_init()
+		C.goips_custom_printf(set.ptr, set.selfptr)
+	}
+
 	return int(C.ipset_parse_line(set.ptr, ccmd))
 }
 

@@ -27,5 +27,10 @@ func main() {
 
 	set.Fail()
 
+	set.Test("bl6", net.ParseIP("::1").To16())
+	set.Test("bl6", net.ParseIP("::2").To16())
+
+	set.Save("bl6")
+
 	fmt.Println("ipset", set)
 }
