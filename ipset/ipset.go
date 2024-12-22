@@ -19,6 +19,7 @@ import "C"
 import (
 	"fmt"
 	"net"
+	"os"
 	"unsafe"
 
 	gopointer "github.com/mattn/go-pointer"
@@ -37,7 +38,7 @@ type IPSet struct {
 }
 
 func init() {
-	fmt.Println("ipset: initializing")
+	fmt.Fprintln(os.Stderr, "ipset: initializing")
 	C.ipset_load_types()
 }
 
@@ -55,13 +56,13 @@ func New() *IPSet {
 }
 
 func (set *IPSet) Command(command string) int {
-	fmt.Println("--- command:", command)
+	fmt.Fprintln(os.Stderr, "--- command:", command)
 	ccmd := C.CString(command)
 	defer C.free(unsafe.Pointer(ccmd))
 
 	if set.ptr != nil {
 		r := C.ipset_fini(set.ptr)
-		fmt.Println("  r =", r)
+		fmt.Fprintln(os.Stderr, "  r =", r)
 		set.ptr = C.ipset_init()
 		C.goips_custom_printf(set.ptr, set.selfptr)
 	}
@@ -70,38 +71,39 @@ func (set *IPSet) Command(command string) int {
 }
 
 func (set *IPSet) Close() {
-	fmt.Println("closing ipset")
+	fmt.Fprintln(os.Stderr, "closing ipset")
 
 	r := C.ipset_fini(set.ptr)
-	fmt.Println("  r =", r)
+	fmt.Fprintln(os.Stderr, "  r =", r)
 
-	fmt.Println("  closing ipset: selfptr")
+	fmt.Fprintln(os.Stderr, "  closing ipset: selfptr")
 	gopointer.Unref(set.selfptr)
 }
 
 func (set *IPSet) Save(name string) {
 	r := set.Command(fmt.Sprintf("save %s", name))
 	if r == 0 {
-		fmt.Println("save OK")
+		fmt.Fprintln(os.Stderr, "save OK")
 	} else {
-		fmt.Println("save NAY")
+		fmt.Fprintln(os.Stderr, "save NAY")
 	}
 }
 
-func (set *IPSet) Test(name string, addr net.IP) {
+func (set *IPSet) Test(name string, addr net.IP) bool {
 	r := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
+
 	if r == 0 {
-		fmt.Println("test OK")
+		return true
 	} else {
-		fmt.Println("test NAY")
+		return false
 	}
 }
 
 func (set *IPSet) Fail() {
 	r := set.Command("no command at ALL")
 	if r == 0 {
-		fmt.Println("cmd OK")
+		fmt.Fprintln(os.Stderr, "cmd OK")
 	} else {
-		fmt.Println("cmd NAY")
+		fmt.Fprintln(os.Stderr, "cmd NAY")
 	}
 }
