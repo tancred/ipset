@@ -171,3 +171,35 @@ func TestCreateWithTimeout(t *testing.T) {
 		t.Errorf("expected timeout %d, was '%v'", expectedTimeout, *info.Timeout)
 	}
 }
+
+func TestCreateV6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	err := set.Create(noSuchSet, CreateOptionFamily("inet6"))
+
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	info, err := set.Info(noSuchSet)
+	if err != nil {
+		t.Fatalf("expected set '%s', got error: %v", noSuchSet, err)
+	}
+
+	if info.Name != noSuchSet {
+		t.Errorf("expected name '%s', was '%s'", noSuchSet, info.Name)
+	}
+	if info.Type != "hash:ip" {
+		t.Errorf("expected type 'hash:ip', was '%s'", info.Type)
+	}
+	if info.Family != "inet6" {
+		t.Errorf("expected family 'inet6', was '%s'", info.Family)
+	}
+	if info.Timeout != nil {
+		t.Errorf("expected no timeout, was '%v'", *info.Timeout)
+	}
+}

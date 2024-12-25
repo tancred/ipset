@@ -109,26 +109,39 @@ func (set *IPSet) Close() {
 	gopointer.Unref(set.selfptr)
 }
 
-type CreateOption func (opts []string) []string
+type CreateOption func (i Info) Info
 
 func CreateOptionTimeout(timeout int) CreateOption {
-	return func (opts []string) []string {
-		opts = append(opts, fmt.Sprintf("timeout %d", timeout))
-		return opts
+	return func (i Info) Info {
+		i.Timeout = &timeout
+		return i
+	}
+}
+
+func CreateOptionFamily(family string) CreateOption {
+	return func (i Info) Info {
+		i.Family = family
+		return i
 	}
 }
 
 func (set *IPSet) Create(name string, options ...CreateOption) error {
-	cmd := fmt.Sprintf("create %s hash:ip", name)
-
-	var opts []string
-	opts = append(opts, cmd)
+	info := Info{
+		Name: name,
+		Type: "hash:ip",
+		Family: "inet",
+		Timeout: nil,
+	}
 
 	for _, o := range options {
-		opts = o(opts)
+		info = o(info)
 	}
-	cmd = strings.Join(opts, " ")
 
+	cmd := fmt.Sprintf("create %s %s", info.Name, info.Type)
+	cmd = cmd + fmt.Sprintf(" family %s", info.Family)
+	if info.Timeout != nil {
+		cmd = cmd + fmt.Sprintf(" timeout %d", *info.Timeout)
+	}
 	_, _, err := set.Command(cmd)
 
 	if err != nil {
