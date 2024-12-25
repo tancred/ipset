@@ -18,7 +18,6 @@ func goipsCustomErrorFn(cset *C.struct_ipset, p unsafe.Pointer, status C.int, ms
 	set := gopointer.Restore(p).(*IPSet)
 	gomsg := C.GoString(msg)
 	set.customError(cset, int(status), strings.TrimSpace(gomsg))
-	// set.customError(cset, int(status), gomsg)
 	return status
 }
 
@@ -27,7 +26,6 @@ func goipsStandardErrorFn(cset *C.struct_ipset, p unsafe.Pointer, errType C.int,
 	set := gopointer.Restore(p).(*IPSet)
 	gomsg := C.GoString(msg)
 	set.stdError(cset, int(errType), strings.TrimSpace(gomsg))
-	// set.stdError(cset, int(errType), gomsg)
 }
 
 //export goipsPrintOutFn
@@ -35,7 +33,6 @@ func goipsPrintOutFn(p unsafe.Pointer, msg *C.char) {
 	set := gopointer.Restore(p).(*IPSet)
 	gomsg := C.GoString(msg)
 	set.printOut(strings.TrimSpace(gomsg))
-	// set.printOut(gomsg)
 }
 
 func (set *IPSet) customError(cset *C.struct_ipset, status int, msg string) {

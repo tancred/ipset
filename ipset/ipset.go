@@ -82,7 +82,6 @@ type Info struct {
 }
 
 func init() {
-	//fmt.Fprintln(os.Stderr, "ipset: initializing")
 	C.ipset_load_types()
 }
 
@@ -100,12 +99,7 @@ func New() *IPSet {
 }
 
 func (set *IPSet) Close() {
-	//fmt.Fprintln(os.Stderr, "closing ipset")
-
 	_ = C.ipset_fini(set.ptr)
-	//fmt.Fprintln(os.Stderr, "  r =", r)
-
-	//fmt.Fprintln(os.Stderr, "  closing ipset: selfptr")
 	gopointer.Unref(set.selfptr)
 }
 
@@ -244,13 +238,11 @@ func (set *IPSet) Test(name string, addr net.IP) (bool, error) {
 }
 
 func (set *IPSet) Command(command string) (int, string, error) {
-	//fmt.Fprintln(os.Stderr, "--- command:", command)
 	ccmd := C.CString(command)
 	defer C.free(unsafe.Pointer(ccmd))
 
 	if set.ptr != nil {
 		_ = C.ipset_fini(set.ptr)
-		//fmt.Fprintln(os.Stderr, "  r =", r)
 		set.ptr = C.ipset_init()
 		C.goips_custom_printf(set.ptr, set.selfptr)
 	}

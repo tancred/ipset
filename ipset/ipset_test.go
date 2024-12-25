@@ -33,7 +33,6 @@ const (
 )
 
 func setup(t *testing.T) func(t *testing.T) {
-	t.Log("setup")
 	set := New()
 	defer set.Close()
 
@@ -45,8 +44,10 @@ func setup(t *testing.T) func(t *testing.T) {
 	set.Create(namedSetV4)
 	set.Add(namedSetV4, net.IPv4(1,2,3,4))
 
+	set.Create(namedSetV6, CreateOptionFamily("inet6"))
+	set.Add(namedSetV6, net.ParseIP("::1").To16())
+
 	return func(t *testing.T) {
-		t.Log("teardown")
 		set := New()
 		defer set.Close()
 
@@ -172,7 +173,7 @@ func TestCreateWithTimeout(t *testing.T) {
 	}
 }
 
-func TestCreateV6(t *testing.T) {
+func TestCreateWithFamilyInet6(t *testing.T) {
 	teardown := setup(t)
 	defer teardown(t)
 
@@ -201,5 +202,149 @@ func TestCreateV6(t *testing.T) {
 	}
 	if info.Timeout != nil {
 		t.Errorf("expected no timeout, was '%v'", *info.Timeout)
+	}
+}
+
+func TestCreateDuplicate(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	err := set.Create(namedSetV4)
+
+	if err == nil {
+		t.Fatalf("expected error on missing set %s, got nothing", namedSetV4)
+	}
+
+	if !strings.Contains(err.Error(), "set with the same name already exists") {
+		t.Errorf("Expected error on existing set but got '%v'", err)
+	}
+}
+
+func testAddIPv4(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	ok, err := set.Add(namedSetV4, net.IPv4(1,2,3,5))
+
+	if err != nil {
+		t.Errorf("expected no error on add, got '%v'", err)
+	}
+
+	if !ok {
+		t.Errorf("expected ok")
+	}
+}
+
+func testAddIPv6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	ok, err := set.Add(namedSetV6, net.ParseIP("::1").To16())
+
+	if err != nil {
+		t.Errorf("expected no error on add, got '%v'", err)
+	}
+
+	if !ok {
+		t.Errorf("expected ok")
+	}
+}
+
+func TestAddNoSet(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add(noSuchSet, net.IPv4(1,2,3,4))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !strings.Contains(err.Error(), "The set with the given name does not exist") {
+		t.Errorf("Expected error on missing set but got '%v'", err)
+	}
+}
+
+func TestAddDuplicateV4(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add(namedSetV4, net.IPv4(1,2,3,4))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
+		t.Errorf("Expected error on address present but got '%v'", err)
+	}
+}
+
+func TestAddDuplicateV6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add(namedSetV6, net.ParseIP("::1").To16())
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
+		t.Errorf("Expected error on address present but got '%v'", err)
+	}
+}
+
+func TestAddIPv6OnIPv4(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add(namedSetV4, net.ParseIP("::2").To16())
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !strings.Contains(err.Error(), "Syntax error: cannot parse ::2: resolving to IPv4 address failed") {
+		t.Errorf("Expected parse error on IPv6 address but got '%v'", err)
+	}
+}
+
+func TestAddIPv4OnIPv6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add(namedSetV6, net.IPv4(1,2,3,4))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !strings.Contains(err.Error(), "Syntax error: cannot parse 1.2.3.4: resolving to IPv6 address failed") {
+		t.Errorf("Expected parse error on IPv4 address but got '%v'", err)
 	}
 }
