@@ -109,6 +109,65 @@ func (set *IPSet) Close() {
 	gopointer.Unref(set.selfptr)
 }
 
+type CreateOption func (opts []string) []string
+
+func CreateOptionTimeout(timeout int) CreateOption {
+	return func (opts []string) []string {
+		opts = append(opts, fmt.Sprintf("timeout %d", timeout))
+		return opts
+	}
+}
+
+func (set *IPSet) Create(name string, options ...CreateOption) error {
+	cmd := fmt.Sprintf("create %s hash:ip", name)
+
+	var opts []string
+	opts = append(opts, cmd)
+
+	for _, o := range options {
+		opts = o(opts)
+	}
+	cmd = strings.Join(opts, " ")
+
+	_, _, err := set.Command(cmd)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+	// var cmderr *cmdError
+	// if errors.As(err, &cmderr) {
+	// 	if cmderr.Level >= errorLevelError {
+	// 		return false, err
+	// 	}
+	// } else if err != nil {
+	// 	return false, err
+	// }
+
+	// return r == 0, nil
+}
+
+func (set *IPSet) Destroy(name string) error {
+	_, _, err := set.Command(fmt.Sprintf("destroy %s", name))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+	// var cmderr *cmdError
+	// if errors.As(err, &cmderr) {
+	// 	if cmderr.Level >= errorLevelError {
+	// 		return false, err
+	// 	}
+	// } else if err != nil {
+	// 	return false, err
+	// }
+
+	// return r == 0, nil
+}
+
 func (set *IPSet) Info(name string) (Info, error) {
 	_, msg, err := set.Command(fmt.Sprintf("save %s", name))
 
@@ -144,6 +203,16 @@ func (set *IPSet) Info(name string) (Info, error) {
 	}
 
 	return info, nil
+}
+
+func (set *IPSet) Add(name string, addr net.IP) (bool, error) {
+	_, _, err := set.Command(fmt.Sprintf("add %s %s", name, addr.String()))
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (set *IPSet) Test(name string, addr net.IP) (bool, error) {
