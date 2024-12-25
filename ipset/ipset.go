@@ -17,9 +17,12 @@ int goips_custom_printf(struct ipset *ipset, void *p);
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 	"unsafe"
 
 	gopointer "github.com/mattn/go-pointer"
@@ -32,13 +35,54 @@ const (
 	FamilyINET6
 )
 
+type errorLevel int
+
+const (
+	errorLevelNoError = iota
+	errorLevelNotice
+	errorLevelWarning
+	errorLevelError
+	errorLevelUnknown
+)
+
+type cmdError struct {
+	Level errorLevel
+	Message string
+}
+
+func (err *cmdError) Error() string {
+	var lvl string
+	switch err.Level {
+	case errorLevelNoError:
+		lvl = ""
+	case errorLevelNotice:
+		lvl = "notice"
+	case errorLevelWarning:
+		lvl = "warning"
+	case errorLevelError:
+		lvl = "error"
+	}
+
+	return fmt.Sprintf("%s: %s", lvl, err.Message)
+}
+
+
 type IPSet struct {
 	ptr     *C.struct_ipset
 	selfptr unsafe.Pointer
+	recentError *cmdError
+	recentMessage string
+}
+
+type Info struct {
+	Name string
+	Type string
+	Family string
+	Timeout *int
 }
 
 func init() {
-	fmt.Fprintln(os.Stderr, "ipset: initializing")
+	//fmt.Fprintln(os.Stderr, "ipset: initializing")
 	C.ipset_load_types()
 }
 
@@ -55,33 +99,99 @@ func New() *IPSet {
 	return set
 }
 
-func (set *IPSet) Command(command string) int {
-	fmt.Fprintln(os.Stderr, "--- command:", command)
+func (set *IPSet) Close() {
+	//fmt.Fprintln(os.Stderr, "closing ipset")
+
+	_ = C.ipset_fini(set.ptr)
+	//fmt.Fprintln(os.Stderr, "  r =", r)
+
+	//fmt.Fprintln(os.Stderr, "  closing ipset: selfptr")
+	gopointer.Unref(set.selfptr)
+}
+
+func (set *IPSet) Info(name string) (Info, error) {
+	_, msg, err := set.Command(fmt.Sprintf("save %s", name))
+
+	var cmderr *cmdError
+	if errors.As(err, &cmderr) {
+		return Info{}, err
+	} else if err != nil {
+		return Info{}, err
+	}
+
+	// create bl hash:ip family inet hashsize 1024 maxelem 65536 bucketsize 12 initval 0xd263dc02
+	// ...
+	lines := strings.Split(msg, "\n")
+	fields := strings.Fields(lines[0])
+
+	info := Info{}
+
+	info.Name = fields[1]
+	info.Type = fields[2]
+
+	for i := 3; i + 1 < len(fields); i++ {
+		key := fields[i]
+		val := fields[i+1]
+
+		switch key {
+		case "family":
+			info.Family = val
+		case "timeout":
+			if n, err := strconv.Atoi(val); err == nil {
+				info.Timeout = &n
+			}
+		}
+	}
+
+	return info, nil
+}
+
+func (set *IPSet) Test(name string, addr net.IP) (bool, error) {
+	r, _, err := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
+
+	var cmderr *cmdError
+	if errors.As(err, &cmderr) {
+		if cmderr.Level >= errorLevelError {
+			return false, err
+		}
+	} else if err != nil {
+		return false, err
+	}
+
+	return r == 0, nil
+}
+
+func (set *IPSet) Command(command string) (int, string, error) {
+	//fmt.Fprintln(os.Stderr, "--- command:", command)
 	ccmd := C.CString(command)
 	defer C.free(unsafe.Pointer(ccmd))
 
 	if set.ptr != nil {
-		r := C.ipset_fini(set.ptr)
-		fmt.Fprintln(os.Stderr, "  r =", r)
+		_ = C.ipset_fini(set.ptr)
+		//fmt.Fprintln(os.Stderr, "  r =", r)
 		set.ptr = C.ipset_init()
 		C.goips_custom_printf(set.ptr, set.selfptr)
 	}
 
-	return int(C.ipset_parse_line(set.ptr, ccmd))
-}
+	set.recentError = nil
+	set.recentMessage = ""
 
-func (set *IPSet) Close() {
-	fmt.Fprintln(os.Stderr, "closing ipset")
+	r := int(C.ipset_parse_line(set.ptr, ccmd))
 
-	r := C.ipset_fini(set.ptr)
-	fmt.Fprintln(os.Stderr, "  r =", r)
+	if set.recentError != nil {
+		err := set.recentError
+		set.recentError = nil
+		return r, "", err
+	}
 
-	fmt.Fprintln(os.Stderr, "  closing ipset: selfptr")
-	gopointer.Unref(set.selfptr)
+	msg := set.recentMessage
+	set.recentMessage = ""
+
+	return r, msg, nil
 }
 
 func (set *IPSet) Save(name string) {
-	r := set.Command(fmt.Sprintf("save %s", name))
+	r, _, _ := set.Command(fmt.Sprintf("save %s", name))
 	if r == 0 {
 		fmt.Fprintln(os.Stderr, "save OK")
 	} else {
@@ -89,18 +199,8 @@ func (set *IPSet) Save(name string) {
 	}
 }
 
-func (set *IPSet) Test(name string, addr net.IP) bool {
-	r := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
-
-	if r == 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
 func (set *IPSet) Fail() {
-	r := set.Command("no command at ALL")
+	r, _, _ := set.Command("no command at ALL")
 	if r == 0 {
 		fmt.Fprintln(os.Stderr, "cmd OK")
 	} else {

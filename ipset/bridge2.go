@@ -40,30 +40,31 @@ func goipsPrintOutFn(p unsafe.Pointer, msg *C.char) {
 
 func (set *IPSet) customError(cset *C.struct_ipset, status int, msg string) {
 	fmt.Printf("  customError: %d (%s) msg: `%s'\n", status, status2String(status), msg)
-
 }
 
 func (set *IPSet) stdError(cset *C.struct_ipset, errType int, msg string) {
-	fmt.Printf("  stdError: %d (%s) msg: `%s'\n", errType, errType2String(errType), msg)
+	set.recentError = &cmdError{
+		Level: errType2Level(errType),
+		Message: msg,
+	}
 }
 
 func (set *IPSet) printOut(msg string) {
-	fmt.Printf("  printOut: msg: `%s'\n", msg)
+	set.recentMessage = set.recentMessage + msg
 }
 
-func errType2String(errType int) string {
+func errType2Level(errType int) errorLevel {
 	switch errType {
 	case C.IPSET_NO_ERROR:
-		return "no error"
+		return errorLevelNoError
 	case C.IPSET_NOTICE:
-		return "NOTE"
+		return errorLevelNotice
 	case C.IPSET_WARNING:
-		return "WARN"
+		return errorLevelWarning
 	case C.IPSET_ERROR:
-		return "ERRR"
-	default:
-		return fmt.Sprintf("unknown error %d", errType)
+		return errorLevelError
 	}
+	return errorLevelUnknown
 }
 
 func status2String(status int) string {
