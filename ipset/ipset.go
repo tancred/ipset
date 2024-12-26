@@ -213,13 +213,17 @@ func (set *IPSet) Info(name string) (Info, error) {
 }
 
 func (set *IPSet) Add(name string, addr net.IP) (bool, error) {
-	_, _, err := set.Command(fmt.Sprintf("add %s %s", name, addr.String()))
+	r, _, err := set.Command(fmt.Sprintf("add %s %s", name, addr.String()))
 
 	if err != nil {
-		return false, err
+		if strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
+			return true, nil
+		}
+
+		return r == 0, err
 	}
 
-	return true, nil
+	return r == 0, nil
 }
 
 func (set *IPSet) Add6(name string, addr net.IP) (bool, error) {
@@ -231,13 +235,16 @@ func (set *IPSet) Add6(name string, addr net.IP) (bool, error) {
 		addrString = addr.String()
 	}
 
-	_, _, err := set.Command(fmt.Sprintf("add %s %s", name, addrString))
+	r, _, err := set.Command(fmt.Sprintf("add %s %s", name, addrString))
 
 	if err != nil {
-		return false, err
+		if strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
+			return true, nil
+		}
+		return r == 0, err
 	}
 
-	return true, nil
+	return r == 0, nil
 }
 
 func (set *IPSet) Test(name string, addr net.IP) (bool, error) {

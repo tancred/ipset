@@ -68,20 +68,20 @@ func TestTestV4(t *testing.T) {
 	name := namedSetV4
 
 	addr := net.IPv4(1,2,3,4)
-	r, err := set.Test(name, addr)
+	found, err := set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if !r {
+	if !found {
 		t.Errorf("address %s expected in the set %s", addr.String(), name)
 	}
 
 	addr = net.IPv4(1,2,3,5)
-	r, err = set.Test(name, addr)
+	found, err = set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if r {
+	if found {
 		t.Errorf("address %s not expected on set %s but was", addr.String(), name)
 	}
 }
@@ -96,20 +96,20 @@ func TestTestV6(t *testing.T) {
 	name := namedSetV6
 
 	addr := net.ParseIP("::1")
-	r, err := set.Test(name, addr)
+	found, err := set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if !r {
+	if !found {
 		t.Errorf("address %s expected in the set %s", addr.String(), name)
 	}
 
 	addr = net.ParseIP("::2")
-	r, err = set.Test(name, addr)
+	found, err = set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if r {
+	if found {
 		t.Errorf("address %s not expected on set %s but was", addr.String(), name)
 	}
 }
@@ -310,14 +310,13 @@ func TestAddDuplicateV4(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add(namedSetV4, net.IPv4(1,2,3,4))
+	ok, err := set.Add(namedSetV4, net.IPv4(1,2,3,4))
 
-	if err == nil {
-		t.Fatalf("expected error on missing set, got nothing")
+	if err != nil {
+		t.Fatalf("expected no error on adding duplicate, got %v", err)
 	}
-
-	if !strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
-		t.Errorf("Expected error on address present but got '%v'", err)
+	if !ok {
+		t.Errorf("add duplicate failed")
 	}
 }
 
@@ -328,14 +327,13 @@ func TestAddDuplicateV6(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add(namedSetV6, net.ParseIP("::1").To16())
+	ok, err := set.Add(namedSetV6, net.ParseIP("::1"))
 
-	if err == nil {
-		t.Fatalf("expected error on missing set, got nothing")
+	if err != nil {
+		t.Fatalf("expected no error on adding duplicate, got %v", err)
 	}
-
-	if !strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
-		t.Errorf("Expected error on address present but got '%v'", err)
+	if !ok {
+		t.Errorf("add duplicate failed")
 	}
 }
 
@@ -346,7 +344,7 @@ func TestAddIPv6OnIPv4(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add(namedSetV4, net.ParseIP("::2").To16())
+	_, err := set.Add(namedSetV4, net.ParseIP("::2"))
 
 	if err == nil {
 		t.Fatalf("expected error on address family mismatch, got nothing")
@@ -403,6 +401,32 @@ func TestAdd6(t *testing.T) {
 	}
 }
 
+func TestAdd6Duplicate(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	ok, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+
+	if err != nil {
+		t.Fatalf("expected no error on adding duplicate, got %v", err)
+	}
+	if !ok {
+		t.Errorf("add duplicate failed")
+	}
+
+	ok, err = set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+
+	if err != nil {
+		t.Fatalf("expected no error on adding duplicate, got %v", err)
+	}
+	if !ok {
+		t.Errorf("add duplicate failed")
+	}
+}
+
 func TestTest6(t *testing.T) {
 	teardown := setup(t)
 	defer teardown(t)
@@ -416,29 +440,29 @@ func TestTest6(t *testing.T) {
 	}
 
 	addr := net.IPv4(1,2,3,4)
-	r, err := set.Test6(namedSetV6, addr)
+	found, err := set.Test6(namedSetV6, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if !r {
+	if !found {
 		t.Errorf("address %s expected in the set %s", addr.String(), namedSetV6)
 	}
 
 	addr = net.ParseIP("::1")
-	r, err = set.Test6(namedSetV6, addr)
+	found, err = set.Test6(namedSetV6, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if !r {
+	if !found {
 		t.Errorf("address %s expected in the set %s", addr.String(), namedSetV6)
 	}
 
 	addr = net.ParseIP("::2")
-	r, err = set.Test6(namedSetV6, addr)
+	found, err = set.Test6(namedSetV6, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
 	}
-	if r {
+	if found {
 		t.Errorf("address %s not expected on set %s but was", addr.String(), namedSetV6)
 	}
 }
