@@ -222,8 +222,49 @@ func (set *IPSet) Add(name string, addr net.IP) (bool, error) {
 	return true, nil
 }
 
+func (set *IPSet) Add6(name string, addr net.IP) (bool, error) {
+	var addrString string
+
+	if addr.To4() != nil {
+		addrString = fmt.Sprintf("::ffff:%s", addr.String())
+	} else {
+		addrString = addr.String()
+	}
+
+	_, _, err := set.Command(fmt.Sprintf("add %s %s", name, addrString))
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (set *IPSet) Test(name string, addr net.IP) (bool, error) {
 	r, _, err := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
+
+	var cmderr *cmdError
+	if errors.As(err, &cmderr) {
+		if cmderr.Level >= errorLevelError {
+			return false, err
+		}
+	} else if err != nil {
+		return false, err
+	}
+
+	return r == 0, nil
+}
+
+func (set *IPSet) Test6(name string, addr net.IP) (bool, error) {
+	var addrString string
+
+	if addr.To4() != nil {
+		addrString = fmt.Sprintf("::ffff:%s", addr.String())
+	} else {
+		addrString = addr.String()
+	}
+
+	r, _, err := set.Command(fmt.Sprintf("test %s %s", name, addrString))
 
 	var cmderr *cmdError
 	if errors.As(err, &cmderr) {

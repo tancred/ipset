@@ -62,8 +62,6 @@ func TestTestV4(t *testing.T) {
 	teardown := setup(t)
 	defer teardown(t)
 
-	// for now we assume the set 'bl' exists
-	// and that 1.2.3.4 is in the set
 	set := New()
 	defer set.Close()
 
@@ -79,6 +77,34 @@ func TestTestV4(t *testing.T) {
 	}
 
 	addr = net.IPv4(1,2,3,5)
+	r, err = set.Test(name, addr)
+	if err != nil {
+		t.Errorf("address %s: unexpected error %v", addr.String(), err)
+	}
+	if r {
+		t.Errorf("address %s not expected on set %s but was", addr.String(), name)
+	}
+}
+
+func TestTestV6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	name := namedSetV6
+
+	addr := net.ParseIP("::1")
+	r, err := set.Test(name, addr)
+	if err != nil {
+		t.Errorf("address %s: unexpected error %v", addr.String(), err)
+	}
+	if !r {
+		t.Errorf("address %s expected in the set %s", addr.String(), name)
+	}
+
+	addr = net.ParseIP("::2")
 	r, err = set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
@@ -323,7 +349,7 @@ func TestAddIPv6OnIPv4(t *testing.T) {
 	_, err := set.Add(namedSetV4, net.ParseIP("::2").To16())
 
 	if err == nil {
-		t.Fatalf("expected error on missing set, got nothing")
+		t.Fatalf("expected error on address family mismatch, got nothing")
 	}
 
 	if !strings.Contains(err.Error(), "Syntax error: cannot parse ::2: resolving to IPv4 address failed") {
@@ -341,10 +367,78 @@ func TestAddIPv4OnIPv6(t *testing.T) {
 	_, err := set.Add(namedSetV6, net.IPv4(1,2,3,4))
 
 	if err == nil {
-		t.Fatalf("expected error on missing set, got nothing")
+		t.Fatalf("expected error on address family mismatch, got nothing")
 	}
 
 	if !strings.Contains(err.Error(), "Syntax error: cannot parse 1.2.3.4: resolving to IPv6 address failed") {
 		t.Errorf("Expected parse error on IPv4 address but got '%v'", err)
+	}
+}
+
+func TestAdd6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	ok, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+
+	if err != nil {
+		t.Fatalf("expected no error on missing set, got nothing")
+	}
+
+	if !ok {
+		t.Errorf("expected ok")
+	}
+
+	ok, err = set.Add6(namedSetV6, net.ParseIP("fe80::842f:57ff:fea2:3864"))
+
+	if err != nil {
+		t.Fatalf("expected no error on missing set, got nothing")
+	}
+
+	if !ok {
+		t.Errorf("expected ok")
+	}
+}
+
+func TestTest6(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+	if err != nil {
+		t.Fatalf("unexpected error adding v6: %v", err)
+	}
+
+	addr := net.IPv4(1,2,3,4)
+	r, err := set.Test6(namedSetV6, addr)
+	if err != nil {
+		t.Errorf("address %s: unexpected error %v", addr.String(), err)
+	}
+	if !r {
+		t.Errorf("address %s expected in the set %s", addr.String(), namedSetV6)
+	}
+
+	addr = net.ParseIP("::1")
+	r, err = set.Test6(namedSetV6, addr)
+	if err != nil {
+		t.Errorf("address %s: unexpected error %v", addr.String(), err)
+	}
+	if !r {
+		t.Errorf("address %s expected in the set %s", addr.String(), namedSetV6)
+	}
+
+	addr = net.ParseIP("::2")
+	r, err = set.Test6(namedSetV6, addr)
+	if err != nil {
+		t.Errorf("address %s: unexpected error %v", addr.String(), err)
+	}
+	if r {
+		t.Errorf("address %s not expected on set %s but was", addr.String(), namedSetV6)
 	}
 }
