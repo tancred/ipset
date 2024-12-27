@@ -46,7 +46,7 @@ const (
 )
 
 type cmdError struct {
-	Level errorLevel
+	Level   errorLevel
 	Message string
 }
 
@@ -66,18 +66,17 @@ func (err *cmdError) Error() string {
 	return fmt.Sprintf("%s: %s", lvl, err.Message)
 }
 
-
 type IPSet struct {
-	ptr     *C.struct_ipset
-	selfptr unsafe.Pointer
-	recentError *cmdError
+	ptr           *C.struct_ipset
+	selfptr       unsafe.Pointer
+	recentError   *cmdError
 	recentMessage string
 }
 
 type Info struct {
-	Name string
-	Type string
-	Family string
+	Name    string
+	Type    string
+	Family  string
 	Timeout *int
 }
 
@@ -103,17 +102,17 @@ func (set *IPSet) Close() {
 	gopointer.Unref(set.selfptr)
 }
 
-type CreateOption func (i Info) Info
+type CreateOption func(i Info) Info
 
 func CreateOptionTimeout(timeout int) CreateOption {
-	return func (i Info) Info {
+	return func(i Info) Info {
 		i.Timeout = &timeout
 		return i
 	}
 }
 
 func CreateOptionFamily(family string) CreateOption {
-	return func (i Info) Info {
+	return func(i Info) Info {
 		i.Family = family
 		return i
 	}
@@ -121,9 +120,9 @@ func CreateOptionFamily(family string) CreateOption {
 
 func (set *IPSet) Create(name string, options ...CreateOption) error {
 	info := Info{
-		Name: name,
-		Type: "hash:ip",
-		Family: "inet",
+		Name:    name,
+		Type:    "hash:ip",
+		Family:  "inet",
 		Timeout: nil,
 	}
 
@@ -195,7 +194,7 @@ func (set *IPSet) Info(name string) (Info, error) {
 	info.Name = fields[1]
 	info.Type = fields[2]
 
-	for i := 3; i + 1 < len(fields); i++ {
+	for i := 3; i+1 < len(fields); i++ {
 		key := fields[i]
 		val := fields[i+1]
 

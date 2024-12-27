@@ -41,7 +41,7 @@ func (set *IPSet) customError(cset *C.struct_ipset, status int, msg string) {
 
 func (set *IPSet) stdError(cset *C.struct_ipset, errType int, msg string) {
 	set.recentError = &cmdError{
-		Level: errType2Level(errType),
+		Level:   errType2Level(errType),
 		Message: msg,
 	}
 }

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"log"
+	"net"
 	"strings"
 
 	"tancred/testipset/ipset"
@@ -19,10 +19,10 @@ func main() {
 	printIP(net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
 	createSetIfNecessary(set, ipset.Info{Name: "bl", Type: "hash:ip", Family: "inet"})
-	set.Add("bl", net.IPv4(1,2,3,5))
+	set.Add("bl", net.IPv4(1, 2, 3, 5))
 
-	testIPv4(set, "bl", net.IPv4(1,2,3,4))
-	testIPv4(set, "bl", net.IPv4(1,2,3,5))
+	testIPv4(set, "bl", net.IPv4(1, 2, 3, 4))
+	testIPv4(set, "bl", net.IPv4(1, 2, 3, 5))
 
 	info, err := set.Info("bl")
 	if err != nil {

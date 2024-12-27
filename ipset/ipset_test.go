@@ -29,7 +29,7 @@ import (
 const (
 	namedSetV4 = "bl4"
 	namedSetV6 = "bl6"
-	noSuchSet = "bl2"
+	noSuchSet  = "bl2"
 )
 
 func setup(t *testing.T) func(t *testing.T) {
@@ -42,7 +42,7 @@ func setup(t *testing.T) func(t *testing.T) {
 	set.Destroy(noSuchSet)
 
 	set.Create(namedSetV4)
-	set.Add(namedSetV4, net.IPv4(1,2,3,4))
+	set.Add(namedSetV4, net.IPv4(1, 2, 3, 4))
 
 	set.Create(namedSetV6, CreateOptionFamily("inet6"))
 	set.Add(namedSetV6, net.ParseIP("::1").To16())
@@ -67,7 +67,7 @@ func TestTestV4(t *testing.T) {
 
 	name := namedSetV4
 
-	addr := net.IPv4(1,2,3,4)
+	addr := net.IPv4(1, 2, 3, 4)
 	found, err := set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
@@ -76,7 +76,7 @@ func TestTestV4(t *testing.T) {
 		t.Errorf("address %s expected in the set %s", addr.String(), name)
 	}
 
-	addr = net.IPv4(1,2,3,5)
+	addr = net.IPv4(1, 2, 3, 5)
 	found, err = set.Test(name, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
@@ -256,7 +256,7 @@ func testAddIPv4(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	ok, err := set.Add(namedSetV4, net.IPv4(1,2,3,5))
+	ok, err := set.Add(namedSetV4, net.IPv4(1, 2, 3, 5))
 
 	if err != nil {
 		t.Errorf("expected no error on add, got '%v'", err)
@@ -292,7 +292,7 @@ func TestAddNoSet(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add(noSuchSet, net.IPv4(1,2,3,4))
+	_, err := set.Add(noSuchSet, net.IPv4(1, 2, 3, 4))
 
 	if err == nil {
 		t.Fatalf("expected error on missing set, got nothing")
@@ -310,7 +310,7 @@ func TestAddDuplicateV4(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	ok, err := set.Add(namedSetV4, net.IPv4(1,2,3,4))
+	ok, err := set.Add(namedSetV4, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
 		t.Fatalf("expected no error on adding duplicate, got %v", err)
@@ -362,7 +362,7 @@ func TestAddIPv4OnIPv6(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add(namedSetV6, net.IPv4(1,2,3,4))
+	_, err := set.Add(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err == nil {
 		t.Fatalf("expected error on address family mismatch, got nothing")
@@ -380,7 +380,7 @@ func TestAdd6(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	ok, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+	ok, err := set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
 		t.Fatalf("expected no error on missing set, got nothing")
@@ -408,7 +408,7 @@ func TestAdd6Duplicate(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	ok, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+	ok, err := set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
 		t.Fatalf("expected no error on adding duplicate, got %v", err)
@@ -417,7 +417,7 @@ func TestAdd6Duplicate(t *testing.T) {
 		t.Errorf("add duplicate failed")
 	}
 
-	ok, err = set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+	ok, err = set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
 		t.Fatalf("expected no error on adding duplicate, got %v", err)
@@ -434,12 +434,12 @@ func TestTest6(t *testing.T) {
 	set := New()
 	defer set.Close()
 
-	_, err := set.Add6(namedSetV6, net.IPv4(1,2,3,4))
+	_, err := set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 	if err != nil {
 		t.Fatalf("unexpected error adding v6: %v", err)
 	}
 
-	addr := net.IPv4(1,2,3,4)
+	addr := net.IPv4(1, 2, 3, 4)
 	found, err := set.Test6(namedSetV6, addr)
 	if err != nil {
 		t.Errorf("address %s: unexpected error %v", addr.String(), err)
