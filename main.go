@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
+	"log"
+	"strings"
 
 	"tancred/testipset/ipset"
 )
@@ -16,6 +18,9 @@ func main() {
 	printIP(net.IPv4(10, 255, 0, 0))
 	printIP(net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
+	createSetIfNecessary(set, ipset.Info{Name: "bl", Type: "hash:ip", Family: "inet"})
+	set.Add("bl", net.IPv4(1,2,3,5))
+
 	testIPv4(set, "bl", net.IPv4(1,2,3,4))
 	testIPv4(set, "bl", net.IPv4(1,2,3,5))
 
@@ -26,14 +31,91 @@ func main() {
 		fmt.Printf("info: %v\n", info)
 	}
 
-	set.Fail()
-
-	set.Test("bl6", net.ParseIP("::1").To16())
-	set.Test("bl6", net.ParseIP("::2").To16())
+	createSetIfNecessary(set, ipset.Info{Name: "bl6", Type: "hash:ip", Family: "inet6"})
+	set.Add6("bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
+	testIPv6(set, "bl6", net.ParseIP("::1"))
+	testIPv6(set, "bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
 
 	set.Save("bl6")
 
 	fmt.Println("ipset", set)
+}
+
+func createSetIfNecessary(set *ipset.IPSet, expInfo ipset.Info) {
+	actInfo, err := set.Info(expInfo.Name)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "The set with the given name does not exist") {
+			log.Printf("creating set %s", expInfo.Name)
+			createSet(set, expInfo)
+			return
+		}
+		log.Fatalf("error: %v", err)
+	} else if !checkInfo(expInfo, actInfo) {
+		log.Printf("destroying set %s", expInfo.Name)
+
+		err = set.Destroy(expInfo.Name)
+		if err != nil {
+			log.Fatalf("failed to remove set %s", expInfo.Name)
+		}
+
+		log.Printf("recreating set %s", expInfo.Name)
+		createSet(set, expInfo)
+	}
+}
+
+func createSet(set *ipset.IPSet, expInfo ipset.Info) {
+	var opts []ipset.CreateOption
+
+	opts = append(opts, ipset.CreateOptionFamily(expInfo.Family))
+
+	if expInfo.Timeout != nil {
+		opts = append(opts, ipset.CreateOptionTimeout(*expInfo.Timeout))
+	}
+
+	err := set.Create(expInfo.Name, opts...)
+
+	if err != nil {
+		log.Fatalf("can't create ipset '%s': %v", expInfo.Name, err)
+	}
+
+	return
+}
+
+func checkInfo(expInfo ipset.Info, actInfo ipset.Info) bool {
+	res := true
+
+	if actInfo.Type != expInfo.Type {
+		log.Printf("Set %s has wrong type, expected %s but was %s", expInfo.Name, expInfo.Type, actInfo.Type)
+		res = false
+	}
+
+	if actInfo.Family != expInfo.Family {
+		log.Printf("Set %s has wrong family, expected %s but was %s", expInfo.Name, expInfo.Family, actInfo.Family)
+		res = false
+	}
+
+	eqTimeout := func(a ipset.Info, b ipset.Info) bool {
+		return (actInfo.Timeout == nil && expInfo.Timeout == nil) || (actInfo.Timeout != nil && expInfo.Timeout != nil && *actInfo.Timeout == *expInfo.Timeout)
+	}
+
+	prntTimeout := func(t *int) string {
+		if t == nil {
+			return "<nil>"
+		}
+		return fmt.Sprintf("%d", *t)
+	}
+
+	if !eqTimeout(actInfo, expInfo) {
+		log.Printf("Set %s has wrong timeout, expected %v but was %v", actInfo.Name, prntTimeout(expInfo.Timeout), prntTimeout(actInfo.Timeout))
+		res = false
+	}
+
+	if res {
+		log.Printf("set %s is present", expInfo.Name)
+	}
+
+	return res
 }
 
 func printIP(a net.IP) {
@@ -53,5 +135,17 @@ func testIPv4(set *ipset.IPSet, name string, addr net.IP) {
 		fmt.Println("  ", addr, "is ON")
 	} else {
 		fmt.Println("  ", addr, "is off")
+	}
+}
+
+func testIPv6(set *ipset.IPSet, name string, addr net.IP) {
+	fmt.Println("testing", addr.To16())
+	ok, err := set.Test(name, addr.To16())
+	if err != nil {
+		fmt.Println("  ", addr.To16(), "error", err)
+	} else if ok {
+		fmt.Println("  ", addr.To16(), "is ON")
+	} else {
+		fmt.Println("  ", addr.To16(), "is off")
 	}
 }

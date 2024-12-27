@@ -320,12 +320,3 @@ func (set *IPSet) Save(name string) {
 		fmt.Fprintln(os.Stderr, "save NAY")
 	}
 }
-
-func (set *IPSet) Fail() {
-	r, _, _ := set.Command("no command at ALL")
-	if r == 0 {
-		fmt.Fprintln(os.Stderr, "cmd OK")
-	} else {
-		fmt.Fprintln(os.Stderr, "cmd NAY")
-	}
-}
