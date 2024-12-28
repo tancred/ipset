@@ -10,15 +10,15 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello, World!")
-
 	set := ipset.New()
 	defer set.Close()
 
 	printIP(net.IPv4(10, 255, 0, 0))
 	printIP(net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
-	createSetIfNecessary(set, ipset.Info{Name: "bl", Type: "hash:ip", Family: "inet"})
+	timeout := 604800
+
+	createSetIfNecessary(set, ipset.Info{Name: "bl", Type: "hash:ip", Family: "inet", Timeout: &timeout})
 	set.Add("bl", net.IPv4(1, 2, 3, 5))
 
 	testIPv4(set, "bl", net.IPv4(1, 2, 3, 4))
@@ -31,7 +31,7 @@ func main() {
 		fmt.Printf("info: %v\n", info)
 	}
 
-	createSetIfNecessary(set, ipset.Info{Name: "bl6", Type: "hash:ip", Family: "inet6"})
+	createSetIfNecessary(set, ipset.Info{Name: "bl6", Type: "hash:ip", Family: "inet6", Timeout: &timeout})
 	set.Add6("bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
 	testIPv6(set, "bl6", net.ParseIP("::1"))
 	testIPv6(set, "bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
@@ -120,10 +120,10 @@ func checkInfo(expInfo ipset.Info, actInfo ipset.Info) bool {
 
 func printIP(a net.IP) {
 	fmt.Println("printIP")
-	fmt.Printf("  %v %#v\n", a, a)
-	fmt.Printf("  %v %#v\n", a.To4(), a.To4())
-	fmt.Printf("  %v %#v\n", a.To16(), a.To16())
-	fmt.Printf("  '%s' '%s'\n", a.To4().String(), a.To16().String())
+	fmt.Printf("a        %v %#v\n", a, a)
+	fmt.Printf("a.To4()  %v %#v\n", a.To4(), a.To4())
+	fmt.Printf("a.To16() %v %#v\n", a.To16(), a.To16())
+	fmt.Printf("a str   '%s' '%s'\n", a.To4().String(), a.To16().String())
 }
 
 func testIPv4(set *ipset.IPSet, name string, addr net.IP) {

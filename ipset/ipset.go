@@ -319,3 +319,11 @@ func (set *IPSet) Save(name string) {
 		fmt.Fprintln(os.Stderr, "save NAY")
 	}
 }
+
+func (set Info) String() string {
+	to := ""
+	if set.Timeout != nil {
+		to = fmt.Sprintf(" timeout %d", *set.Timeout)
+	}
+	return fmt.Sprintf("<create %s %s family %s%s>", set.Name, set.Type, set.Family, to)
+}
