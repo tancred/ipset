@@ -1,6 +1,7 @@
 package ipset
 
 import (
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -114,6 +115,24 @@ func TestTestV6(t *testing.T) {
 	}
 }
 
+func TestTestNoSet(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Test(noSuchSet, net.IPv4(1,2,3,4))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
+	}
+}
+
 func TestInfoOnNonexistent(t *testing.T) {
 	teardown := setup(t)
 	defer teardown(t)
@@ -127,8 +146,8 @@ func TestInfoOnNonexistent(t *testing.T) {
 		t.Fatalf("expected error on missing set %s, instead got info %v", noSuchSet, info)
 	}
 
-	if !strings.Contains(err.Error(), "The set with the given name does not exist") {
-		t.Errorf("Expected error on missing set but got '%v'", err)
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
 	}
 }
 
@@ -244,6 +263,10 @@ func TestCreateDuplicate(t *testing.T) {
 		t.Fatalf("expected error on missing set %s, got nothing", namedSetV4)
 	}
 
+	if !errors.Is(err, ErrSetExists) {
+		t.Errorf("error should be ErrSetExists, was %T", err)
+	}
+
 	if !strings.Contains(err.Error(), "set with the same name already exists") {
 		t.Errorf("Expected error on existing set but got '%v'", err)
 	}
@@ -298,8 +321,26 @@ func TestAddNoSet(t *testing.T) {
 		t.Fatalf("expected error on missing set, got nothing")
 	}
 
-	if !strings.Contains(err.Error(), "The set with the given name does not exist") {
-		t.Errorf("Expected error on missing set but got '%v'", err)
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
+	}
+}
+
+func TestAdd6NoSet(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Add6(noSuchSet, net.IPv4(1, 2, 3, 4))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
 	}
 }
 
@@ -383,7 +424,7 @@ func TestAdd6(t *testing.T) {
 	ok, err := set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
-		t.Fatalf("expected no error on missing set, got nothing")
+		t.Fatalf("expected no error when adding v4 address, got %v", err)
 	}
 
 	if !ok {
@@ -393,7 +434,7 @@ func TestAdd6(t *testing.T) {
 	ok, err = set.Add6(namedSetV6, net.ParseIP("fe80::842f:57ff:fea2:3864"))
 
 	if err != nil {
-		t.Fatalf("expected no error on missing set, got nothing")
+		t.Fatalf("expected no error when adding v6 address, got %v", err)
 	}
 
 	if !ok {
@@ -411,7 +452,7 @@ func TestAdd6Duplicate(t *testing.T) {
 	ok, err := set.Add6(namedSetV6, net.IPv4(1, 2, 3, 4))
 
 	if err != nil {
-		t.Fatalf("expected no error on adding duplicate, got %v", err)
+		t.Fatalf("expected no error when adding v4 address, got %v", err)
 	}
 	if !ok {
 		t.Errorf("add duplicate failed")
@@ -464,5 +505,23 @@ func TestTest6(t *testing.T) {
 	}
 	if found {
 		t.Errorf("address %s not expected on set %s but was", addr.String(), namedSetV6)
+	}
+}
+
+func TestTest6NoSet(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	_, err := set.Test6(noSuchSet, net.ParseIP("::1"))
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
 	}
 }

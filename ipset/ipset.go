@@ -66,6 +66,9 @@ func (err *cmdError) Error() string {
 	return fmt.Sprintf("%s: %s", lvl, err.Message)
 }
 
+var ErrSetNotFound = errors.New("set not found")
+var ErrSetExists = errors.New("set exists")
+
 type IPSet struct {
 	ptr           *C.struct_ipset
 	selfptr       unsafe.Pointer
@@ -138,20 +141,10 @@ func (set *IPSet) Create(name string, options ...CreateOption) error {
 	_, _, err := set.Command(cmd)
 
 	if err != nil {
-		return err
+		return transformCmdError(err)
 	}
 
 	return nil
-	// var cmderr *cmdError
-	// if errors.As(err, &cmderr) {
-	// 	if cmderr.Level >= errorLevelError {
-	// 		return false, err
-	// 	}
-	// } else if err != nil {
-	// 	return false, err
-	// }
-
-	// return r == 0, nil
 }
 
 func (set *IPSet) Destroy(name string) error {
@@ -177,11 +170,8 @@ func (set *IPSet) Destroy(name string) error {
 func (set *IPSet) Info(name string) (Info, error) {
 	_, msg, err := set.Command(fmt.Sprintf("save %s", name))
 
-	var cmderr *cmdError
-	if errors.As(err, &cmderr) {
-		return Info{}, err
-	} else if err != nil {
-		return Info{}, err
+	if err != nil {
+		return Info{}, transformCmdError(err)
 	}
 
 	// create bl hash:ip family inet hashsize 1024 maxelem 65536 bucketsize 12 initval 0xd263dc02
@@ -212,17 +202,7 @@ func (set *IPSet) Info(name string) (Info, error) {
 }
 
 func (set *IPSet) Add(name string, addr net.IP) (bool, error) {
-	r, _, err := set.Command(fmt.Sprintf("add %s %s", name, addr.String()))
-
-	if err != nil {
-		if strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
-			return true, nil
-		}
-
-		return r == 0, err
-	}
-
-	return r == 0, nil
+	return set.add(fmt.Sprintf("add %s %s", name, addr.String()))
 }
 
 func (set *IPSet) Add6(name string, addr net.IP) (bool, error) {
@@ -234,31 +214,26 @@ func (set *IPSet) Add6(name string, addr net.IP) (bool, error) {
 		addrString = addr.String()
 	}
 
-	r, _, err := set.Command(fmt.Sprintf("add %s %s", name, addrString))
+	return set.add(fmt.Sprintf("add %s %s", name, addrString))
+}
+
+func (set *IPSet) add(cmd string) (bool, error) {
+	r, _, err := set.Command(cmd)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Element cannot be added to the set: it's already added") {
 			return true, nil
 		}
-		return r == 0, err
+
+		return r == 0, transformCmdError(err)
 	}
 
 	return r == 0, nil
 }
 
 func (set *IPSet) Test(name string, addr net.IP) (bool, error) {
-	r, _, err := set.Command(fmt.Sprintf("test %s %s", name, addr.String()))
-
-	var cmderr *cmdError
-	if errors.As(err, &cmderr) {
-		if cmderr.Level >= errorLevelError {
-			return false, err
-		}
-	} else if err != nil {
-		return false, err
-	}
-
-	return r == 0, nil
+	cmd := fmt.Sprintf("test %s %s", name, addr.String())
+	return set.test(cmd)
 }
 
 func (set *IPSet) Test6(name string, addr net.IP) (bool, error) {
@@ -270,7 +245,20 @@ func (set *IPSet) Test6(name string, addr net.IP) (bool, error) {
 		addrString = addr.String()
 	}
 
-	r, _, err := set.Command(fmt.Sprintf("test %s %s", name, addrString))
+	cmd := fmt.Sprintf("test %s %s", name, addrString)
+	return set.test(cmd)
+}
+
+func (set *IPSet) test(cmd string) (bool, error) {
+	r, _, err := set.Command(cmd)
+
+	// First transform.
+	// If the transformed error is still a cmdError it will be dealt with
+	// accordingly. Specifically, if the error is a warning or info on match
+	// or no match it will be ignored, etc. If on the other hand the error
+	// is translated to an explicit error then we know we have a "genuine"
+	//failure.
+	err = transformCmdError(err)
 
 	var cmderr *cmdError
 	if errors.As(err, &cmderr) {
@@ -326,4 +314,19 @@ func (set Info) String() string {
 		to = fmt.Sprintf(" timeout %d", *set.Timeout)
 	}
 	return fmt.Sprintf("<create %s %s family %s%s>", set.Name, set.Type, set.Family, to)
+}
+
+func transformCmdError(err error) error {
+	var cmderr *cmdError
+	if errors.As(err, &cmderr) {
+		if cmderr.Message == "The set with the given name does not exist" {
+			return errors.Join(cmderr, ErrSetNotFound)
+		}
+
+		if cmderr.Message == "Set cannot be created: set with the same name already exists" {
+			return errors.Join(cmderr, ErrSetExists)
+		}
+	}
+
+	return err
 }
