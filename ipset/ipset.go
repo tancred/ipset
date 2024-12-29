@@ -20,19 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"unsafe"
 
 	gopointer "github.com/mattn/go-pointer"
-)
-
-type Family int
-
-const (
-	FamilyINET = iota
-	FamilyINET6
 )
 
 type errorLevel int
@@ -151,20 +143,10 @@ func (set *IPSet) Destroy(name string) error {
 	_, _, err := set.Command(fmt.Sprintf("destroy %s", name))
 
 	if err != nil {
-		return err
+		return transformCmdError(err)
 	}
 
 	return nil
-	// var cmderr *cmdError
-	// if errors.As(err, &cmderr) {
-	// 	if cmderr.Level >= errorLevelError {
-	// 		return false, err
-	// 	}
-	// } else if err != nil {
-	// 	return false, err
-	// }
-
-	// return r == 0, nil
 }
 
 func (set *IPSet) Info(name string) (Info, error) {
@@ -297,15 +279,6 @@ func (set *IPSet) Command(command string) (int, string, error) {
 	set.recentMessage = ""
 
 	return r, msg, nil
-}
-
-func (set *IPSet) Save(name string) {
-	r, _, _ := set.Command(fmt.Sprintf("save %s", name))
-	if r == 0 {
-		fmt.Fprintln(os.Stderr, "save OK")
-	} else {
-		fmt.Fprintln(os.Stderr, "save NAY")
-	}
 }
 
 func (set Info) String() string {

@@ -266,9 +266,43 @@ func TestCreateDuplicate(t *testing.T) {
 	if !errors.Is(err, ErrSetExists) {
 		t.Errorf("error should be ErrSetExists, was %T", err)
 	}
+}
 
-	if !strings.Contains(err.Error(), "set with the same name already exists") {
-		t.Errorf("Expected error on existing set but got '%v'", err)
+func TestDestroy(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	err := set.Destroy(namedSetV4)
+
+	if err != nil {
+		t.Fatalf("unexpected error destroying set: %v", err)
+	}
+
+	_, err = set.Info(noSuchSet)
+
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetExists, was %T", err)
+	}
+}
+
+func TestDestroyNoSet(t *testing.T) {
+	teardown := setup(t)
+	defer teardown(t)
+
+	set := New()
+	defer set.Close()
+
+	err := set.Destroy(noSuchSet)
+
+	if err == nil {
+		t.Fatalf("expected error on missing set, got nothing")
+	}
+
+	if !errors.Is(err, ErrSetNotFound) {
+		t.Errorf("error should be ErrSetNotFound, was %T", err)
 	}
 }
 

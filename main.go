@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
 
 	"tancred/testipset/ipset"
 )
@@ -35,17 +34,13 @@ func main() {
 	set.Add6("bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
 	testIPv6(set, "bl6", net.ParseIP("::1"))
 	testIPv6(set, "bl6", net.ParseIP("fe80::842f:57ff:fea2:3864"))
-
-	set.Save("bl6")
-
-	fmt.Println("ipset", set)
 }
 
 func createSetIfNecessary(set *ipset.IPSet, expInfo ipset.Info) {
 	actInfo, err := set.Info(expInfo.Name)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "The set with the given name does not exist") {
+		if err == ipset.ErrSetNotFound {
 			log.Printf("creating set %s", expInfo.Name)
 			createSet(set, expInfo)
 			return
