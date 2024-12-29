@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -40,7 +41,7 @@ func createSetIfNecessary(set *ipset.IPSet, expInfo ipset.Info) {
 	actInfo, err := set.Info(expInfo.Name)
 
 	if err != nil {
-		if err == ipset.ErrSetNotFound {
+		if errors.Is(err, ipset.ErrSetNotFound) {
 			log.Printf("creating set %s", expInfo.Name)
 			createSet(set, expInfo)
 			return
