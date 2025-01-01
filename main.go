@@ -13,9 +13,6 @@ func main() {
 	set := ipset.New()
 	defer set.Close()
 
-	printIP(net.IPv4(10, 255, 0, 0))
-	printIP(net.IP{0xfc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-
 	timeout := 604800
 
 	createSetIfNecessary(set, ipset.Info{Name: "bl", Type: "hash:ip", Family: "inet", Timeout: &timeout})
