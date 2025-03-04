@@ -8,7 +8,7 @@
 #
 # Happy coding!
 #
-FROM golang:1.23
+FROM golang:1.24
 
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q update \
