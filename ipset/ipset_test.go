@@ -20,7 +20,6 @@ func setup(t *testing.T) func(t *testing.T) {
 	set.Destroy(namedSetV4)
 	set.Destroy(noSuchSet)
 	set.Destroy(namedSetV6)
-	set.Destroy(noSuchSet)
 
 	set.Create(namedSetV4)
 	set.Add(namedSetV4, net.IPv4(1, 2, 3, 4))
@@ -35,7 +34,6 @@ func setup(t *testing.T) func(t *testing.T) {
 		set.Destroy(namedSetV4)
 		set.Destroy(noSuchSet)
 		set.Destroy(namedSetV6)
-		set.Destroy(noSuchSet)
 	}
 }
 
