@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"tancred/testipset/ipset"
+	"github.com/tancred/ipset"
 )
 
 func main() {
